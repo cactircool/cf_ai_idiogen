@@ -74,16 +74,9 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 	}
 
 	private async generateCode(prompt: string): Promise<GeneratedFiles> {
-		const answer = await this.env.AI.run('@cf/qwen/qwen2.5-coder-32b-instruct', {
-			messages: [
-				{
-					role: 'system',
-					content:
-						'You are a code generator that outputs ONLY code in the exact format specified. Never include explanations, markdown formatting, or any text outside the specified format.',
-				},
-				{
-					role: 'user',
-					content: `CRITICAL INSTRUCTIONS - YOU MUST FOLLOW EXACTLY:
+		const answer = await this.env.AI.run('@cf/openai/gpt-oss-120b', {
+			input: `You are a code generator that outputs ONLY code in the exact format specified. Never include explanations, markdown formatting, or any text outside the specified format.
+				CRITICAL INSTRUCTIONS - YOU MUST FOLLOW EXACTLY:
 
 1. OUTPUT ONLY CODE IN THE SPECIFIED FORMAT
 2. NO TEXT BEFORE THE FIRST ===FILE
@@ -140,13 +133,28 @@ Example program here.
 ===END===
 
 RESPOND WITH NOTHING BUT THE 5 FILES IN THIS EXACT FORMAT. START NOW WITH ===FILE parser.y===`,
-				},
-			],
+			max_output_tokens: 10000,
+			temperature: 0.7,
 		});
 
-		const responseText = typeof answer === 'string' ? answer : 'response' in answer ? answer.response : '';
+		let responseText = '';
+		if (answer.output_text) {
+			responseText = answer.output_text;
+		} else if (answer.output && Array.isArray(answer.output)) {
+			responseText = answer.output
+				.map((item) => {
+					if (item.type === 'message') return item.content.map((a) => (a.type === 'output_text' ? a.text : a.refusal)).join('\n');
+					if (item.type === 'reasoning') {
+						if (item.content) return item.content.map((a) => a.text).join('\n');
+					}
+					return '';
+				})
+				.filter(Boolean)
+				.join('');
+		}
+
 		if (!responseText) {
-			throw new Error('AI returned empty response');
+			throw new Error(`AI returned empty response, Structure: ${JSON.stringify(answer, null, 2).substring(0, 2000)}`);
 		}
 
 		const files = this.parseFiles(responseText);
