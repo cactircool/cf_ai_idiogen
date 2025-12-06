@@ -22,7 +22,7 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 			'generate-code',
 			{
 				retries: {
-					limit: 3,
+					limit: 7,
 					delay: 5000,
 				},
 			},
@@ -86,9 +86,10 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 					content: `CRITICAL INSTRUCTIONS - YOU MUST FOLLOW EXACTLY:
 
 1. OUTPUT ONLY CODE IN THE SPECIFIED FORMAT
-2. NO EXPLANATIONS OR MARKDOWN
-3. NO TEXT BEFORE THE FIRST ===FILE
-4. NO TEXT AFTER THE LAST ===END===
+2. NO TEXT BEFORE THE FIRST ===FILE
+3. NO TEXT AFTER THE LAST ===END===
+4. REMEMBER TO ALSO INCLUDE THE README.md AS THE SECOND TO LAST FILE
+5. REMEMBER example.txt AS THE LAST FILE
 
 Generate Bison parser (parser.y), Flex lexer (flex.l), and C interpreter for: ${prompt}
 

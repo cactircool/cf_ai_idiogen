@@ -115,13 +115,13 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 
 	// --- Run bison ---
 	if out, err := exec.Command("bison", "-d", "-o", parserC, parserPath).CombinedOutput(); err != nil {
-		http.Error(w, "bison error:\n"+string(out), 500)
+		http.Error(w, "bison error:\n"+err.Error()+"\n"+string(out), 500)
 		return
 	}
 
 	// --- Run flex ---
 	if out, err := exec.Command("flex", "-o", lexerC, lexerPath).CombinedOutput(); err != nil {
-		http.Error(w, "flex error:\n"+string(out), 500)
+		http.Error(w, "flex error:\n"+err.Error()+"\n"+string(out), 500)
 		return
 	}
 
@@ -139,7 +139,7 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if out, err := emcc.CombinedOutput(); err != nil {
-		http.Error(w, "emcc error:\n"+string(out), 500)
+		http.Error(w, "emcc error:\n"+err.Error()+"\n"+string(out), 500)
 		return
 	}
 
