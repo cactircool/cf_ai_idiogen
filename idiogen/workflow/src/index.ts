@@ -61,7 +61,7 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 				for (const [filename, content] of Object.entries(files)) {
 					form.append(filename.split('.')[0], new Blob([content]), filename);
 				}
-				const response = await fetch('https://your-go-server/compile', {
+				const response = await fetch('https://idiogen.cactircool.com/compile', {
 					method: 'POST',
 					body: form,
 				});

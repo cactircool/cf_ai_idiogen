@@ -78,7 +78,9 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 
 	save := func(dst string, src io.Reader) error {
 		out, err := os.Create(dst)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		defer out.Close()
 		_, err = io.Copy(out, src)
 		return err
@@ -107,8 +109,8 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Output paths
 	parserC := strings.TrimSuffix(parserPath, filepath.Ext(parserPath)) + ".c"
-	lexerC  := strings.TrimSuffix(lexerPath,  filepath.Ext(lexerPath))  + ".c"
-	jsOut   := strings.TrimSuffix(interpPath, filepath.Ext(interpPath)) + ".js"
+	lexerC := strings.TrimSuffix(lexerPath, filepath.Ext(lexerPath)) + ".c"
+	jsOut := strings.TrimSuffix(interpPath, filepath.Ext(interpPath)) + ".js"
 	wasmOut := strings.TrimSuffix(jsOut, ".js") + ".wasm"
 
 	// --- Run bison ---
@@ -173,11 +175,15 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 
 	addToZip := func(path string) {
 		f, err := os.Open(path)
-		if err != nil { return }
+		if err != nil {
+			return
+		}
 		defer f.Close()
 
 		wr, err := zipWriter.Create(filepath.Base(path))
-		if err != nil { return }
+		if err != nil {
+			return
+		}
 		io.Copy(wr, f)
 	}
 
@@ -199,14 +205,16 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/compile", compileHandler)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("Hello world!\n")) })
 
 	server := &http.Server{
-		Addr:         ":8443",
+		Addr:         ":9657",
 		Handler:      mux,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 
-	log.Println("HTTPS server listening on https://localhost:8443")
-	log.Fatal(server.ListenAndServeTLS("cert.pem", "key.pem"))
+	log.Println("HTTP server listening on https://localhost:9657")
+	// log.Fatal(server.ListenAndServeTLS("cert.pem", "key.pem"))
+	server.ListenAndServe()
 }
