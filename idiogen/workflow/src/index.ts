@@ -254,9 +254,9 @@ RESPOND WITH NOTHING BUT THE 5 FILES IN THIS EXACT FORMAT. START NOW WITH ===FIL
 			try {
 				const form = new FormData();
 				form.append('parser', new Blob([files['parser.y']]), 'parser.y');
-				form.append('flex', new Blob([files['flex.l']]), 'flex.l');
+				form.append('lexer', new Blob([files['flex.l']]), 'flex.l');
 				form.append('interpreter', new Blob([files['interpreter.c']]), 'interpreter.c');
-				form.append('readme', new Blob([files['README.md']]), 'README.md');
+				form.append('README', new Blob([files['README.md']]), 'README.md');
 				form.append('example', new Blob([files['example.txt']]), 'example.txt');
 
 				const response = await fetch('https://idiogen.cactircool.com/compile', {
