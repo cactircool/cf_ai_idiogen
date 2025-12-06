@@ -42,10 +42,10 @@ export default function LanguageGenerator() {
 				method: "POST",
 				body: JSON.stringify({ prompt: languageDescription }),
 			});
-			const { workflowId } = await res.json();
+			const { workflowId } = (await res.json()) as any;
 
 			let attempts = 0;
-			const maxAttempts = 60;
+			const maxAttempts = 1000;
 
 			while (attempts < maxAttempts) {
 				await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -53,7 +53,8 @@ export default function LanguageGenerator() {
 				const statusRes = await fetch(
 					`/api/generate/status?workflowId=${workflowId}`,
 				);
-				const statusData = await statusRes.json();
+				const statusData = (await statusRes.json()) as any;
+				console.log("Status data:", statusData);
 
 				if (statusData.status === "complete") {
 					const result = statusData.output;
