@@ -206,6 +206,48 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/compile", compileHandler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("Hello world!\n")) })
+	mux.HandleFunc("/test-emcc", func(w http.ResponseWriter, r *http.Request) {
+		file, err := os.CreateTemp("", "main*.c")
+		if err != nil {
+			http.Error(w, "C file creation error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		js, err := os.CreateTemp("", "main*.js")
+		if err != nil {
+			http.Error(w, "JS file creation error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer js.Close()
+
+		file.WriteString(`
+		#include <stdio.h>
+		int main(int argc, char **argv) {
+			printf("Hello world!\n");
+			return 0;
+		}
+		`)
+
+		emcc := exec.Command(
+			"/opt/emsdk/upstream/emscripten/emcc",
+			file.Name(),
+			"-O3",
+			"-s", "WASM=1",
+			"-s", "MODULARIZE=1",
+			"-s", "EXPORT_NAME=createInterpreterModule",
+			"-s", "EXPORTED_FUNCTIONS=['_main']",
+			"-s", "EXPORTED_RUNTIME_METHODS=['FS','ccall','cwrap']",
+			"-o", js.Name(),
+		)
+
+		out, err := emcc.CombinedOutput()
+		if err != nil {
+			http.Error(w, "emcc running error: "+err.Error()+"\n"+string(out), http.StatusInternalServerError)
+			return
+		}
+		w.Write(out)
+	})
 
 	server := &http.Server{
 		Addr:         ":9657",
