@@ -144,19 +144,19 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	addToZip := func(w *zip.Writer, path string) error {
-	    f, err := os.Open(path)
-	    if err != nil {
-	        return err
-	    }
-	    defer f.Close()
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
-	    wr, err := w.Create(filepath.Base(path))
-	    if err != nil {
-	        return err
-	    }
+		wr, err := w.Create(filepath.Base(path))
+		if err != nil {
+			return err
+		}
 
-	    _, err = io.Copy(wr, f)
-	    return err
+		_, err = io.Copy(wr, f)
+		return err
 	}
 
 	// --- Create combined.c (lexer + parser + interpreter concatenated) ---
@@ -168,21 +168,21 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cZipWriter := zip.NewWriter(combinedOut)
-	for _, f := range []string{lexerC, parserC, interpPath} {
-	    if err := addToZip(cZipWriter, f); err != nil {
-	        http.Error(w, "failed writing combined.zip: "+err.Error(), 500)
-	        return
-	    }
+	for _, f := range []string{lexerC, parserC, strings.Trim(parserC, filepath.Ext(parserC)) + ".h", interpPath} {
+		if err := addToZip(cZipWriter, f); err != nil {
+			http.Error(w, "failed writing combined.zip: "+err.Error(), 500)
+			return
+		}
 	}
 
 	if err := cZipWriter.Close(); err != nil {
-	    http.Error(w, "failed closing combined.zip writer: "+err.Error(), 500)
-	    return
+		http.Error(w, "failed closing combined.zip writer: "+err.Error(), 500)
+		return
 	}
 
 	if err := combinedOut.Close(); err != nil {
-	    http.Error(w, "failed closing combined.zip: "+err.Error(), 500)
-	    return
+		http.Error(w, "failed closing combined.zip: "+err.Error(), 500)
+		return
 	}
 
 	// --- ZIP Output ---
@@ -195,16 +195,16 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	defer zf.Close()
 
 	zipWriter := zip.NewWriter(zf)
-	for _, f := range []string{ combinedZip, jsOut, wasmOut, readmePath, examplePath } {
+	for _, f := range []string{combinedZip, jsOut, wasmOut, readmePath, examplePath} {
 		if err := addToZip(zipWriter, f); err != nil {
-		    http.Error(w, "failed writing output.zip: "+err.Error(), 500)
-		    return
+			http.Error(w, "failed writing output.zip: "+err.Error(), 500)
+			return
 		}
 	}
 
 	if err := zipWriter.Close(); err != nil {
-	    http.Error(w, "failed closing output.zip writer: "+err.Error(), 500)
-	    return
+		http.Error(w, "failed closing output.zip writer: "+err.Error(), 500)
+		return
 	}
 
 	// Send zip back
