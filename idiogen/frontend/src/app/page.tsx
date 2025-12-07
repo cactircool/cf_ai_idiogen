@@ -37,91 +37,102 @@ export default function LanguageGenerator() {
 	const generateLanguage = async () => {
 		setIsRunning(true);
 
-		try {
-			const res = await fetch("/api/generate", {
-				method: "POST",
-				body: JSON.stringify({ prompt: languageDescription }),
-			});
-			const { workflowId } = (await res.json()) as any;
+		while (true) {
+			try {
+				const res = await fetch("/api/generate", {
+					method: "POST",
+					body: JSON.stringify({ prompt: languageDescription }),
+				});
+				const { workflowId } = (await res.json()) as any;
 
-			let attempts = 0;
-			const maxAttempts = 1000;
+				let attempts = 0;
+				const maxAttempts = 1000;
 
-			while (attempts < maxAttempts) {
-				await new Promise((resolve) => setTimeout(resolve, 3000));
+				while (attempts < maxAttempts) {
+					await new Promise((resolve) => setTimeout(resolve, 3000));
 
-				const statusRes = await fetch(
-					`/api/generate/status?workflowId=${workflowId}`,
+					const statusRes = await fetch(
+						`/api/generate/status?workflowId=${workflowId}`,
+					);
+					const statusData = (await statusRes.json()) as any;
+					console.log("Status data:", statusData);
+
+					if (statusData.status === "complete") {
+						const result = statusData.output;
+						const zipData = result.zipData;
+
+						// Decode the base64 zip file
+						const binaryString = atob(zipData);
+						const bytes = new Uint8Array(binaryString.length);
+						for (let i = 0; i < binaryString.length; i++) {
+							bytes[i] = binaryString.charCodeAt(i);
+						}
+
+						// Use JSZip from your imports
+						const JSZip = (await import("jszip")).default;
+						const zip = await JSZip.loadAsync(bytes);
+
+						const readme =
+							(await zip.file("readme.md")?.async("string")) ||
+							"";
+						const example =
+							(await zip.file("example.txt")?.async("string")) ||
+							"";
+						const interpreterJs =
+							(await zip
+								.file("interpreter.js")
+								?.async("string")) || "";
+						const interpreterWasm = await zip
+							.file("interpreter.wasm")
+							?.async("arraybuffer");
+						const combinedC =
+							(await zip.file("combined.c")?.async("string")) ||
+							"";
+
+						if (!interpreterWasm) {
+							throw new Error(
+								"interpreter.wasm not found in zip",
+							);
+						}
+
+						setInterpreter({
+							source: combinedC,
+							loader: interpreterJs,
+							wasm: interpreterWasm,
+						});
+
+						setGeneratedLanguage({
+							description: languageDescription,
+							readme,
+							example,
+						});
+
+						setUserCode(example);
+
+						// Initialize WASM module
+						await initializeWasmModule(
+							interpreterJs,
+							interpreterWasm,
+						);
+
+						setIsRunning(false);
+						setStep(2);
+						return;
+					}
+
+					if (statusData.status === "errored") {
+						throw new Error(statusData.error || "Workflow failed");
+					}
+					attempts++;
+				}
+
+				throw new Error("Workflow timeout");
+			} catch (err) {
+				alert(
+					`Error: ${err instanceof Error ? err.message : "An error occurred"}\nRetrying...`,
 				);
-				const statusData = (await statusRes.json()) as any;
-				console.log("Status data:", statusData);
-
-				if (statusData.status === "complete") {
-					const result = statusData.output;
-					const zipData = result.zipData;
-
-					// Decode the base64 zip file
-					const binaryString = atob(zipData);
-					const bytes = new Uint8Array(binaryString.length);
-					for (let i = 0; i < binaryString.length; i++) {
-						bytes[i] = binaryString.charCodeAt(i);
-					}
-
-					// Use JSZip from your imports
-					const JSZip = (await import("jszip")).default;
-					const zip = await JSZip.loadAsync(bytes);
-
-					const readme =
-						(await zip.file("readme.md")?.async("string")) || "";
-					const example =
-						(await zip.file("example.txt")?.async("string")) || "";
-					const interpreterJs =
-						(await zip.file("interpreter.js")?.async("string")) ||
-						"";
-					const interpreterWasm = await zip
-						.file("interpreter.wasm")
-						?.async("arraybuffer");
-					const combinedC =
-						(await zip.file("combined.c")?.async("string")) || "";
-
-					if (!interpreterWasm) {
-						throw new Error("interpreter.wasm not found in zip");
-					}
-
-					setInterpreter({
-						source: combinedC,
-						loader: interpreterJs,
-						wasm: interpreterWasm,
-					});
-
-					setGeneratedLanguage({
-						description: languageDescription,
-						readme,
-						example,
-					});
-
-					setUserCode(example);
-
-					// Initialize WASM module
-					await initializeWasmModule(interpreterJs, interpreterWasm);
-
-					setIsRunning(false);
-					setStep(2);
-					return;
-				}
-
-				if (statusData.status === "error") {
-					throw new Error(statusData.error || "Workflow failed");
-				}
-				attempts++;
+				setIsRunning(false);
 			}
-
-			throw new Error("Workflow timeout");
-		} catch (err) {
-			alert(
-				`Error: ${err instanceof Error ? err.message : "An error occurred"}`,
-			);
-			setIsRunning(false);
 		}
 	};
 

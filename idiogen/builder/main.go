@@ -108,8 +108,8 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Output paths
-	parserC := strings.TrimSuffix(parserPath, filepath.Ext(parserPath)) + ".c"
-	lexerC := strings.TrimSuffix(lexerPath, filepath.Ext(lexerPath)) + ".c"
+	parserC := filepath.Join(tmpDir, "y.tab.c")
+	lexerC := filepath.Join(tmpDir, "lex.yy.c")
 	jsOut := strings.TrimSuffix(interpPath, filepath.Ext(interpPath)) + ".js"
 	wasmOut := strings.TrimSuffix(jsOut, ".js") + ".wasm"
 

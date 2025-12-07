@@ -51,7 +51,7 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 			'compile-interpreter',
 			{
 				retries: {
-					limit: 5, // Try compiling up to 5 times
+					limit: 1, // Try compiling up to 5 times
 					delay: 10000,
 				},
 			},
@@ -81,8 +81,9 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 1. OUTPUT ONLY CODE IN THE SPECIFIED FORMAT
 2. NO TEXT BEFORE THE FIRST ===FILE
 3. NO TEXT AFTER THE LAST ===END===
-4. REMEMBER TO ALSO INCLUDE THE README.md AS THE SECOND TO LAST FILE
-5. REMEMBER example.txt AS THE LAST FILE
+4. REMEMBER TO ALSO INCLUDE THE README.md AS THE SECOND TO LAST FILE AND MAKE SURE TO POPULATE IT WITH DOCUMENTATION
+5. REMEMBER example.txt AS THE LAST FILE AND MAKE SURE TO POPULATE IT WITH EXAMPLE CODE
+6. When
 
 Generate Bison parser (parser.y), Flex lexer (flex.l), and C interpreter for: ${prompt}
 
