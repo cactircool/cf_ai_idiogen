@@ -22,11 +22,10 @@ Type=simple
 User=www-data
 Group=www-data
 
-Environment=PORT=5634
 Environment=NODE_ENV=production
 
 WorkingDirectory=$frontend_dir
-ExecStart=/usr/bin/npm start -p \${PORT}
+ExecStart=/usr/bin/npm start -p 5634
 
 Restart=always
 RestartSec=3
