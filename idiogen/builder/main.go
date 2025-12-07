@@ -143,18 +143,20 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addToZip := func(w *zip.Writer, path string) {
-		f, err := os.Open(path)
-		if err != nil {
-			return
-		}
-		defer f.Close()
+	addToZip := func(w *zip.Writer, path string) error {
+	    f, err := os.Open(path)
+	    if err != nil {
+	        return err
+	    }
+	    defer f.Close()
 
-		wr, err := w.Create(filepath.Base(path))
-		if err != nil {
-			return
-		}
-		io.Copy(wr, f)
+	    wr, err := w.Create(filepath.Base(path))
+	    if err != nil {
+	        return err
+	    }
+
+	    _, err = io.Copy(wr, f)
+	    return err
 	}
 
 	// --- Create combined.c (lexer + parser + interpreter concatenated) ---
@@ -164,13 +166,24 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to create combined.zip: "+err.Error(), 500)
 		return
 	}
-	defer combinedOut.Close()
 
 	cZipWriter := zip.NewWriter(combinedOut)
 	for _, f := range []string{lexerC, parserC, interpPath} {
-		addToZip(cZipWriter, f)
+	    if err := addToZip(cZipWriter, f); err != nil {
+	        http.Error(w, "failed writing combined.zip: "+err.Error(), 500)
+	        return
+	    }
 	}
-	cZipWriter.Close()
+
+	if err := cZipWriter.Close(); err != nil {
+	    http.Error(w, "failed closing combined.zip writer: "+err.Error(), 500)
+	    return
+	}
+
+	if err := combinedOut.Close(); err != nil {
+	    http.Error(w, "failed closing combined.zip: "+err.Error(), 500)
+	    return
+	}
 
 	// --- ZIP Output ---
 	zipPath := filepath.Join(tmpDir, "output.zip")
@@ -183,9 +196,16 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 
 	zipWriter := zip.NewWriter(zf)
 	for _, f := range []string{ combinedZip, jsOut, wasmOut, readmePath, examplePath } {
-		addToZip(zipWriter, f)
+		if err := addToZip(zipWriter, f); err != nil {
+		    http.Error(w, "failed writing output.zip: "+err.Error(), 500)
+		    return
+		}
 	}
-	zipWriter.Close()
+
+	if err := zipWriter.Close(); err != nil {
+	    http.Error(w, "failed closing output.zip writer: "+err.Error(), 500)
+	    return
+	}
 
 	// Send zip back
 	w.Header().Set("Content-Type", "application/zip")
