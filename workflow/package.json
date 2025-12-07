@@ -2,9 +2,9 @@
 	"name": "workflows-starter",
 	"version": "0.0.1",
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
-		"types": "wrangler types"
+		"deploy": "npx wrangler deploy",
+		"start": "npx wrangler dev",
+		"types": "npx wrangler types"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250417.0",
