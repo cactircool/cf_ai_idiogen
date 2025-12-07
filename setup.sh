@@ -3,6 +3,7 @@
 SCRIPT_DIR=$(dirname $0)
 
 cd $SCRIPT_DIR/workflow
+npm install
 npm run types
 npm run deploy
 
