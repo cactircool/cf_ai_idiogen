@@ -25,7 +25,7 @@ Group=cactus
 Environment=NODE_ENV=production
 
 WorkingDirectory=$frontend_dir
-ExecStart=/usr/bin/npm run start -p 5634
+ExecStart=/usr/bin/npm run start
 
 Restart=always
 RestartSec=3
