@@ -30,9 +30,9 @@
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
-	// "vars": {
-	// 	"BUILD_WORKER_URL": "https://build.arjunkrishnan410.workers.dev",
-	// },
+	"vars": {
+		"BUILD_SERVER": "https://idiogen.cactircool.com/compile",
+	},
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/

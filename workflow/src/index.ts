@@ -270,7 +270,7 @@ RESPOND WITH NOTHING BUT THE 5 FILES IN THIS EXACT FORMAT. START NOW WITH ===FIL
 				form.append('README', new Blob([files['README.md']]), 'README.md');
 				form.append('example', new Blob([files['example.txt']]), 'example.txt');
 
-				const response = await fetch('https://idiogen.cactircool.com/compile', {
+				const response = await fetch(this.env.BUILD_SERVER, {
 					method: 'POST',
 					body: form,
 				});
