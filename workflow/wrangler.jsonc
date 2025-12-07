@@ -31,7 +31,7 @@
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
 	"vars": {
-		"BUILD_SERVER": "https://idiogen.cactircool.com/compile",
+		"BUILD_SERVER": "https://idiogen-server.cactircool.com/compile",
 	},
 	/**
 	 * Note: Use secrets to store sensitive data.
