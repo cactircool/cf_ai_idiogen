@@ -126,16 +126,32 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- Run Emscripten ---
+	// emcc := exec.Command(
+	// 	"emcc",
+	// 	lexerC, parserC, interpPath, "/usr/lib/x86_64-linux-gnu/libfl.a",
+	// 	"-O3",
+	// 	"-s", "WASM=1",
+	// 	"-s", "MODULARIZE=1",
+	// 	"-s", "EXPORT_NAME=createInterpreterModule",
+	// 	"-s", "EXPORTED_FUNCTIONS=['_main']",
+	// 	"-s", "EXPORTED_RUNTIME_METHODS=['FS','ccall','cwrap']",
+	// 	"-o", jsOut,
+	// )
+
 	emcc := exec.Command(
-		"emcc",
-		lexerC, parserC, interpPath, "/usr/lib/x86_64-linux-gnu/libfl.a",
-		"-O3",
-		"-s", "WASM=1",
-		"-s", "MODULARIZE=1",
-		"-s", "EXPORT_NAME=createInterpreterModule",
-		"-s", "EXPORTED_FUNCTIONS=['_main']",
-		"-s", "EXPORTED_RUNTIME_METHODS=['FS','ccall','cwrap']",
-		"-o", jsOut,
+	    "emcc",
+	    lexerC, parserC, interpPath, "/usr/lib/x86_64-linux-gnu/libfl.a",
+	    "-O3",
+
+	    "-s", "MODULARIZE=1",
+	    "-s", "EXPORT_NAME=createInterpreterModule",
+	    "-s", "ENVIRONMENT=web",
+	    "-s", "FORCE_FILESYSTEM=1",
+
+	    "-s", "EXPORTED_FUNCTIONS=['_main']",
+	    "-s", "EXPORTED_RUNTIME_METHODS=['FS','ccall','cwrap']",
+
+	    "-o", jsOut,
 	)
 
 	if out, err := emcc.CombinedOutput(); err != nil {

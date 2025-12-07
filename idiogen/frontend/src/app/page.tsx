@@ -71,9 +71,6 @@ export default function LanguageGenerator() {
 					const JSZip = (await import("jszip")).default;
 					const zip = await JSZip.loadAsync(bytes);
 
-					for (const filename in zip.files)
-						console.log("File:", filename);
-
 					const readme =
 						(await zip.file("README.md")?.async("string")) || "";
 					const example =
@@ -84,15 +81,15 @@ export default function LanguageGenerator() {
 					const interpreterWasm = await zip
 						.file("interpreter.wasm")
 						?.async("arraybuffer");
-					const combinedZip =
-						(await zip.file("combined.zip")?.async("string")) || "";
+					const combinedC =
+						(await zip.file("combined.c")?.async("string")) || "";
 
 					if (!interpreterWasm) {
 						throw new Error("interpreter.wasm not found in zip");
 					}
 
 					setInterpreter({
-						source: combinedZip,
+						source: combinedC,
 						loader: interpreterJs,
 						wasm: interpreterWasm,
 					});
@@ -143,11 +140,27 @@ export default function LanguageGenerator() {
 
 			const createModule = new Function(moduleCode)();
 
+			// We'll store output in a ref that can be accessed during execution
+			const outputBuffer: string[] = [];
+			const errorBuffer: string[] = [];
+
 			const Module = await createModule({
 				wasmBinary: wasmBytes,
 				noInitialRun: true,
-				stdin: () => null, // Return null to prevent prompts
+				stdin: () => null,
+				print: (text: string) => {
+					console.log("[WASM OUTPUT]", text);
+					outputBuffer.push(text);
+				},
+				printErr: (text: string) => {
+					console.error("[WASM ERROR]", text);
+					errorBuffer.push(text);
+				},
 			});
+
+			// Attach buffers to module for access during runCode
+			Module._outputBuffer = outputBuffer;
+			Module._errorBuffer = errorBuffer;
 
 			wasmModuleRef.current = Module;
 		} catch (err) {
@@ -167,157 +180,66 @@ export default function LanguageGenerator() {
 
 		try {
 			const Module = wasmModuleRef.current;
-			let capturedOutput = "";
-			let capturedError = "";
 
-			// Capture console.log and console.error as well
-			const originalConsoleLog = console.log;
-			const originalConsoleError = console.error;
+			// Clear the output buffers
+			if (Module._outputBuffer) {
+				Module._outputBuffer.length = 0;
+			}
+			if (Module._errorBuffer) {
+				Module._errorBuffer.length = 0;
+			}
 
-			console.log = (...args: any[]) => {
-				const text = args.map((a) => String(a)).join(" ");
-				capturedOutput += text + "\n";
-				originalConsoleLog(...args);
-			};
+			// Set up stdin to read from userCode line by line
+			const lines = userCode.split("\n");
+			let lineIndex = 0;
+			let charIndex = 0;
 
-			console.error = (...args: any[]) => {
-				const text = args.map((a) => String(a)).join(" ");
-				capturedError += text + "\n";
-				originalConsoleError(...args);
-			};
-
-			// Set up output capture through Emscripten's print functions
-			Module.print = (text: string) => {
-				capturedOutput += text + "\n";
-			};
-
-			Module.printErr = (text: string) => {
-				capturedError += text + "\n";
-			};
-
-			// Set up stdin to read from userCode
-			let stdinPos = 0;
-			const stdinData = new TextEncoder().encode(userCode + "\n");
 			Module.stdin = () => {
-				if (stdinPos < stdinData.length) {
-					return stdinData[stdinPos++];
+				// If we've gone through all lines, return EOF
+				if (lineIndex >= lines.length) {
+					return null;
 				}
-				return null; // EOF
+
+				const currentLine = lines[lineIndex];
+
+				// If we're at the end of the current line, return newline and move to next line
+				if (charIndex >= currentLine.length) {
+					lineIndex++;
+					charIndex = 0;
+					return 10; // newline character
+				}
+
+				// Return the current character
+				const byte = currentLine.charCodeAt(charIndex);
+				charIndex++;
+				return byte;
 			};
 
 			try {
-				const filename = "input.txt";
-
-				// Ensure FS exists
-				if (!Module.FS) {
-					throw new Error("FileSystem not available in WASM module");
-				}
-
-				// Write user code to virtual filesystem
-				Module.FS.writeFile(filename, userCode);
-
-				// Try to set up output streams
-				try {
-					// Create output handlers for TTY
-					const stdout = {
-						output: [] as number[],
-						write: (text: number) => {
-							if (text === 10 || text === 13) {
-								// newline
-								const line = String.fromCharCode(
-									...stdout.output,
-								);
-								capturedOutput += line + "\n";
-								stdout.output = [];
-							} else if (text !== 0) {
-								stdout.output.push(text);
-							}
-						},
-						flush: () => {
-							if (stdout.output.length > 0) {
-								const line = String.fromCharCode(
-									...stdout.output,
-								);
-								capturedOutput += line;
-								stdout.output = [];
-							}
-						},
-					};
-
-					const stderr = {
-						output: [] as number[],
-						write: (text: number) => {
-							if (text === 10 || text === 13) {
-								const line = String.fromCharCode(
-									...stderr.output,
-								);
-								capturedError += line + "\n";
-								stderr.output = [];
-							} else if (text !== 0) {
-								stderr.output.push(text);
-							}
-						},
-						flush: () => {
-							if (stderr.output.length > 0) {
-								const line = String.fromCharCode(
-									...stderr.output,
-								);
-								capturedError += line;
-								stderr.output = [];
-							}
-						},
-					};
-
-					// Override TTY streams if available
-					if (
-						Module.FS &&
-						Module.FS.streams &&
-						Module.FS.streams[1]
-					) {
-						const oldStdout = Module.FS.streams[1];
-						Module.FS.streams[1] = {
-							...oldStdout,
-							tty: {
-								...oldStdout.tty,
-								output: stdout,
-							},
-						};
-					}
-
-					if (
-						Module.FS &&
-						Module.FS.streams &&
-						Module.FS.streams[2]
-					) {
-						const oldStderr = Module.FS.streams[2];
-						Module.FS.streams[2] = {
-							...oldStderr,
-							tty: {
-								...oldStderr.tty,
-								output: stderr,
-							},
-						};
-					}
-				} catch (e) {
-					console.log("Could not set up TTY streams:", e);
-				}
-
-				// Call main
+				// Call main with NO arguments - just run the interpreter interactively
 				let exitCode = 0;
+				console.log("[EXEC] Starting interactive interpreter");
+
 				try {
 					if (Module.callMain) {
-						Module.callMain([filename]);
+						// Call with empty args - the interpreter reads from stdin
+						Module.callMain([]);
 					} else {
+						// Call main with argc=1 (just program name, no file argument)
 						exitCode = Module.ccall(
 							"main",
 							"number",
 							["number", "array"],
-							[2, ["program", filename]],
+							[1, ["program"]],
 						);
 					}
 				} catch (e: any) {
 					if (e.name === "ExitStatus") {
 						exitCode = e.status;
+						console.log(
+							"[EXEC] Program exited with code:",
+							exitCode,
+						);
 					} else {
 						throw e;
 					}
@@ -326,54 +248,36 @@ export default function LanguageGenerator() {
 				// Wait for any pending output
 				await new Promise((resolve) => setTimeout(resolve, 100));
 
-				// Restore console
-				console.log = originalConsoleLog;
-				console.error = originalConsoleError;
+				// Collect output from buffers
+				let finalOutput = "";
 
-				// Combine all output
-				let finalOutput = capturedOutput;
-				if (capturedError) {
-					finalOutput += "\n--- STDERR ---\n" + capturedError;
+				if (Module._outputBuffer && Module._outputBuffer.length > 0) {
+					finalOutput = Module._outputBuffer.join("\n");
+					console.log("[OUTPUT] Captured:", Module._outputBuffer);
 				}
 
-				// Check for output file
-				try {
-					if (Module.FS.analyzePath("output.txt").exists) {
-						const outputContent = Module.FS.readFile("output.txt", {
-							encoding: "utf8",
-						});
-						finalOutput +=
-							"\n--- OUTPUT FILE ---\n" + outputContent;
-					}
-				} catch (e) {
-					// No output file
+				if (Module._errorBuffer && Module._errorBuffer.length > 0) {
+					if (finalOutput) finalOutput += "\n";
+					finalOutput +=
+						"--- STDERR ---\n" + Module._errorBuffer.join("\n");
+					console.log("[ERROR] Captured:", Module._errorBuffer);
 				}
 
-				// If no output was captured, show exit code
+				// If no output was captured, show debug info
 				if (!finalOutput.trim()) {
-					finalOutput = `✓ Program completed successfully (exit code: ${exitCode})\n\nNo output was produced. The interpreter may not be writing to stdout.`;
+					finalOutput = `✓ Program completed (exit code: ${exitCode})\n\n`;
+					finalOutput += `⚠️ No output captured.\n\n`;
+					finalOutput += `Debug info:\n`;
+					finalOutput += `- Check browser console (F12) for [WASM OUTPUT] logs\n`;
+					finalOutput += `- Input lines: ${lines.length}\n`;
+					finalOutput += `- The interpreter may be buffering output\n`;
 				}
 
 				setOutput(finalOutput);
 			} finally {
-				// Restore console
-				console.log = originalConsoleLog;
-				console.error = originalConsoleError;
-
-				// Clean up
-				try {
-					if (Module.FS.analyzePath("input.txt").exists) {
-						Module.FS.unlink("input.txt");
-					}
-				} catch (e) {
-					// File cleanup failed
-				}
+				// No cleanup needed since we didn't create files
 			}
 		} catch (err: any) {
-			// Restore console
-			console.log = console.log;
-			console.error = console.error;
-
 			let errorMsg = `❌ Execution Error:\n`;
 
 			if (err.name === "ExitStatus") {
@@ -404,7 +308,7 @@ export default function LanguageGenerator() {
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
 		a.href = url;
-		a.download = "interpreter-source.zip";
+		a.download = "interpreter-source.c";
 		document.body.appendChild(a);
 		a.click();
 		document.body.removeChild(a);
@@ -419,7 +323,7 @@ export default function LanguageGenerator() {
 
 		const JSZip = (await import("jszip")).default;
 		const zip = new JSZip();
-		zip.file("combined.zip", interpreter.source);
+		zip.file("combined.c", interpreter.source);
 		zip.file("interpreter.js", interpreter.loader);
 		zip.file("interpreter.wasm", interpreter.wasm);
 		zip.file("README.md", generatedLanguage.readme);

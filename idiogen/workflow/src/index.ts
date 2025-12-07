@@ -84,6 +84,7 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 4. REMEMBER TO ALSO INCLUDE THE README.md AS THE SECOND TO LAST FILE AND MAKE SURE TO POPULATE IT WITH DOCUMENTATION
 5. REMEMBER example.txt AS THE LAST FILE AND MAKE SURE TO POPULATE IT WITH EXAMPLE CODE
 6. THE INCLUDES FOR THE PARSER AND LEXER ARE DEFAULT, SO: y.tab.h, y.tab.c, lex.yy.c.
+7. THE INTERPRETER SHOULD USE stdin TO READ DATA FROM, NOT A SEPERATE FILE OR ANYTHING.
 
 Generate Bison parser (parser.y), Flex lexer (flex.l), and C interpreter for: ${prompt}
 
