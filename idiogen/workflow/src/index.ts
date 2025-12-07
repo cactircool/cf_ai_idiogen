@@ -83,7 +83,7 @@ export class IdioGenWorkflow extends WorkflowEntrypoint<Env, Params> {
 3. NO TEXT AFTER THE LAST ===END===
 4. REMEMBER TO ALSO INCLUDE THE README.md AS THE SECOND TO LAST FILE AND MAKE SURE TO POPULATE IT WITH DOCUMENTATION
 5. REMEMBER example.txt AS THE LAST FILE AND MAKE SURE TO POPULATE IT WITH EXAMPLE CODE
-6. When
+6. THE INCLUDES FOR THE PARSER AND LEXER ARE DEFAULT, SO: y.tab.h, y.tab.c, lex.yy.c.
 
 Generate Bison parser (parser.y), Flex lexer (flex.l), and C interpreter for: ${prompt}
 

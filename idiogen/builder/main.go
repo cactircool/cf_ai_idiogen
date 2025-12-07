@@ -143,24 +143,34 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	addToZip := func(w *zip.Writer, path string) {
+		f, err := os.Open(path)
+		if err != nil {
+			return
+		}
+		defer f.Close()
+
+		wr, err := w.Create(filepath.Base(path))
+		if err != nil {
+			return
+		}
+		io.Copy(wr, f)
+	}
+
 	// --- Create combined.c (lexer + parser + interpreter concatenated) ---
-	combinedC := filepath.Join(tmpDir, "combined.c")
-	combinedOut, err := os.Create(combinedC)
+	combinedZip := filepath.Join(tmpDir, "combined.zip")
+	combinedOut, err := os.Create(combinedZip)
 	if err != nil {
 		http.Error(w, "failed to create combined.c: "+err.Error(), 500)
 		return
 	}
 	defer combinedOut.Close()
 
+	cZipWriter := zip.NewWriter(combinedOut)
 	for _, f := range []string{lexerC, parserC, interpPath} {
-		in, err := os.Open(f)
-		if err != nil {
-			http.Error(w, "failed opening "+f+": "+err.Error(), 500)
-			return
-		}
-		io.Copy(combinedOut, in)
-		in.Close()
+		addToZip(cZipWriter, f)
 	}
+	cZipWriter.Close()
 
 	// --- ZIP Output ---
 	zipPath := filepath.Join(tmpDir, "output.zip")
@@ -172,27 +182,9 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	defer zf.Close()
 
 	zipWriter := zip.NewWriter(zf)
-
-	addToZip := func(path string) {
-		f, err := os.Open(path)
-		if err != nil {
-			return
-		}
-		defer f.Close()
-
-		wr, err := zipWriter.Create(filepath.Base(path))
-		if err != nil {
-			return
-		}
-		io.Copy(wr, f)
+	for _, f := range []string{ combinedZip, jsOut, wasmOut, readmePath, examplePath } {
+		addToZip(zipWriter, f)
 	}
-
-	addToZip(combinedC)
-	addToZip(jsOut)
-	addToZip(wasmOut)
-	addToZip(readmePath)
-	addToZip(examplePath)
-
 	zipWriter.Close()
 
 	// Send zip back
