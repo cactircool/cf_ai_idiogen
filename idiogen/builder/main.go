@@ -128,7 +128,7 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	// --- Run Emscripten ---
 	emcc := exec.Command(
 		"emcc",
-		lexerC, parserC, interpPath,
+		lexerC, parserC, interpPath, "/usr/lib/x86_64-linux-gnu/libfl.a",
 		"-O3",
 		"-s", "WASM=1",
 		"-s", "MODULARIZE=1",
