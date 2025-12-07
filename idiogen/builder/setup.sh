@@ -27,6 +27,9 @@ Restart=always
 RestartSec=3
 
 Environment=PORT=9657
+Environment=EMSDK=/opt/emsdk
+Environment=EMSCRIPTEN=/opt/emsdk/upstream/emscripten
+Environment=PATH=/opt/emsdk:/opt/emsdk/upstream/emscripten:/opt/emsdk/node/18.0.0_64bit/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 
 # Increase security
 AmbientCapabilities=CAP_NET_BIND_SERVICE
