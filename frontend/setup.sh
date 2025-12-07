@@ -26,7 +26,7 @@ Environment=PORT=5634
 Environment=NODE_ENV=production
 
 WorkingDirectory=$frontend_dir
-ExecStart=/usr/bin/npm run start
+ExecStart=/usr/bin/npm start -- -p \${PORT}
 
 Restart=always
 RestartSec=3
