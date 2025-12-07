@@ -161,7 +161,7 @@ func compileHandler(w http.ResponseWriter, r *http.Request) {
 	combinedZip := filepath.Join(tmpDir, "combined.zip")
 	combinedOut, err := os.Create(combinedZip)
 	if err != nil {
-		http.Error(w, "failed to create combined.c: "+err.Error(), 500)
+		http.Error(w, "failed to create combined.zip: "+err.Error(), 500)
 		return
 	}
 	defer combinedOut.Close()

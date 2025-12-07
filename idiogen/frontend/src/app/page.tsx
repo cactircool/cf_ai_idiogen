@@ -71,6 +71,9 @@ export default function LanguageGenerator() {
 					const JSZip = (await import("jszip")).default;
 					const zip = await JSZip.loadAsync(bytes);
 
+					for (const filename in zip.files)
+						console.log("File:", filename);
+
 					const readme =
 						(await zip.file("README.md")?.async("string")) || "";
 					const example =
@@ -81,15 +84,15 @@ export default function LanguageGenerator() {
 					const interpreterWasm = await zip
 						.file("interpreter.wasm")
 						?.async("arraybuffer");
-					const combinedC =
-						(await zip.file("combined.c")?.async("string")) || "";
+					const combinedZip =
+						(await zip.file("combined.zip")?.async("string")) || "";
 
 					if (!interpreterWasm) {
 						throw new Error("interpreter.wasm not found in zip");
 					}
 
 					setInterpreter({
-						source: combinedC,
+						source: combinedZip,
 						loader: interpreterJs,
 						wasm: interpreterWasm,
 					});
@@ -401,7 +404,7 @@ export default function LanguageGenerator() {
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
 		a.href = url;
-		a.download = "interpreter-source.c";
+		a.download = "interpreter-source.zip";
 		document.body.appendChild(a);
 		a.click();
 		document.body.removeChild(a);
@@ -416,7 +419,7 @@ export default function LanguageGenerator() {
 
 		const JSZip = (await import("jszip")).default;
 		const zip = new JSZip();
-		zip.file("combined.c", interpreter.source);
+		zip.file("combined.zip", interpreter.source);
 		zip.file("interpreter.js", interpreter.loader);
 		zip.file("interpreter.wasm", interpreter.wasm);
 		zip.file("README.md", generatedLanguage.readme);
